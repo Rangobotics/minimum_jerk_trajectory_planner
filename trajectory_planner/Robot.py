@@ -1,8 +1,9 @@
+from trajectory_planner.Trajectory import Trajectory
 from .Pose import Pose
 
 class Robot:
     def __init__(self, name, color, total_time,
-                 path_finder_controller, pose_start: Pose, pose_target: Pose):
+                 path_finder_controller, pose_start: Pose, pose_target: Pose, move_type):
         self.name = name
         self.color = color
         self.path_finder_controller = path_finder_controller
@@ -19,8 +20,14 @@ class Robot:
         self.current_step = 0
         self.is_at_target = False
 
+        if move_type != "r" and move_type != "tx" and move_type != "ty":
+            raise Exception("Couldn't build Robot instance, move type has to be 'r' or 'tx' or 'ty' (rotate or translate)")
+        
+        self.move_type = move_type
+
     def generate_trajectory(self, dt):
         self.trajectory = self.path_finder_controller.generate_trajectory(self.pose_start, self.pose_target, self.total_time, dt)
+        self.odometry = Trajectory(self.trajectory[0], self.trajectory[1])
         return self.trajectory
 
     def move(self):
@@ -49,3 +56,12 @@ class Robot:
         except IndexError as e:
             print(f"Robot {self.name}'s software crashed")
             raise
+
+    def __eq__(self, other):
+        return (self.name, self.color, self.pose_start.x, self.pose_start.y, self.pose_start.theta) == (other.name, other.color, other.pose_start.x, other.pose_start.y, other.pose_start.theta)
+    
+    def __hash__(self):
+        return hash((self.name, self.color, self.pose_start.x, self.pose_start.y, self.pose_start.theta))
+
+    def __ne__(self, other):
+        return not(self == other)

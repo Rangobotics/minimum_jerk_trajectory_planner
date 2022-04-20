@@ -5,15 +5,14 @@ TIME_STEP = 0.01
 AT_TARGET_ACCEPTANCE_THRESHOLD = 0.01
 SHOW_ANIMATION = True
 SHOW_TRAJECTORY = True
-PLOT_WINDOW_SIZE_X = 20
-PLOT_WINDOW_SIZE_Y = 20
+PLOT_WINDOW_SIZE_X = 10
+PLOT_WINDOW_SIZE_Y = 10
 PLOT_FONT_SIZE = 8
-TIME_DURATION = 10.0
 
 simulation_running = True
 all_robots_are_at_target = False
 
-def run_simulation(robots):
+def run_simulation(robots, time_duration):
     """Simulates all robots simultaneously"""
     global all_robots_are_at_target
     global simulation_running
@@ -23,10 +22,10 @@ def run_simulation(robots):
     robot_names = []
     for instance in robots:
         robot_names.append(instance.name)
-        trajectories[instance.name] = instance.generate_trajectory(TIME_STEP)
+        trajectories[instance] = instance.generate_trajectory(TIME_STEP)
 
     time = 0
-    while simulation_running and time < TIME_DURATION:
+    while simulation_running and time < time_duration:
         time += TIME_STEP
         robots_are_at_target = []
 
@@ -79,16 +78,51 @@ def run_simulation(robots):
             plt.pause(TIME_STEP)
 
     if SHOW_TRAJECTORY:
-        for k, v in trajectories.items():
-            fig, ax = plt.subplots()
+        for k in trajectories:
+            fig, axes = plt.subplots()
             new_poses = []
-            for pose in v[1]:
-                new_poses.append([pose.x, pose.y, pose.theta])
-            new_poses = np.array(new_poses)
-            ax.plot(v[0], new_poses)
-            ax.set_title("Minimum Jerk Trajectory")
-            ax.set_xlabel("Time")
-            ax.set_ylabel("Position")
+            new_accel = []
+            new_vel = []
+
+            if k.move_type == "r":
+                for pose in k.odometry.poses:
+                    new_poses.append(pose.theta)
+                
+                for v in k.odometry.velocities:
+                    new_vel.append(v.theta)
+                
+                for a in k.odometry.accelerations:
+                    new_accel.append(a.theta)
+
+            elif k.move_type == "ty":
+                for pose in k.odometry.poses:
+                    new_poses.append(pose.y)
+                
+                for v in k.odometry.velocities:
+                    new_vel.append(v.y)
+                
+                for a in k.odometry.accelerations:
+                    new_accel.append(a.y)
+
+            elif k.move_type == "tx":
+                for pose in k.odometry.poses:
+                    new_poses.append(pose.x)
+
+                for v in k.odometry.velocities:
+                    new_vel.append(v.x)
+                
+                for a in k.odometry.accelerations:
+                    new_accel.append(a.x)
+
+            unit = "rad" if k.move_type == "r" else "m"
+            axes.plot(k.odometry.timestamps, new_poses)
+            axes.plot(k.odometry.timestamps, new_vel)
+            axes.plot(k.odometry.timestamps, new_accel)
+            axes.legend([f"Pose ({unit})", 
+                         f"Velocity ({unit}/s)",
+                         f"Acceleration ({unit}/s²)"
+                        ])
+            fig.suptitle("Trajectory Course")
         
         plt.show()
 
